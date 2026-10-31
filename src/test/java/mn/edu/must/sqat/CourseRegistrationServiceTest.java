@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -144,9 +145,11 @@ class CourseRegistrationServiceTest {
     })
     void register_errorClass_returnsErrorAndNeitherSavesNorSends(
             boolean studentExists, boolean active, boolean courseExists, String expected) {
-        when(repository.findStudent(STUDENT_ID))
+        // Мөр бүр service-ийг өөр цэгт зогсоодог: NO_STUDENT, INACTIVE мөрүүдэд courseExists
+        // хэзээ ч дуудагдахгүй тул strict stubs "UnnecessaryStubbingException" өгнө → lenient().
+        lenient().when(repository.findStudent(STUDENT_ID))
                 .thenReturn(studentExists ? student(active, List.of("CS201")) : null);
-        when(repository.courseExists(COURSE_ID)).thenReturn(courseExists);
+        lenient().when(repository.courseExists(COURSE_ID)).thenReturn(courseExists);
 
         String result = service.register(STUDENT_ID, COURSE_ID);
 
