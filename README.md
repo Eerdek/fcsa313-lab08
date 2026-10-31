@@ -46,6 +46,8 @@ results/mvn-test-mutant-2.txt                   мутант-2: saveRegistration
 results/mvn-test-mutant-3.txt                   мутант-3: || courseId == null устгав (A6 засварын дараа)
 results/mvn-test-mutant-3-before.txt            мутант-3: A6 засахаас ӨМНӨ — нэг ч тест унаагүй (цоорхой)
 results/mvn-test-a8-strict.txt                  A8 энгийн when()-тэй — UnnecessaryStubbingException
+ai/AiCourseRegistrationServiceTest.java.txt     нэмэлт даалгавар: AI-ийн бичсэн тест (src/test-д ОРУУЛААГҮЙ)
+ai/ai-mutation-results.txt                      AI-ийн тестийг 3 мутантын эсрэг ажиллуулсан үр дүн
 ```
 
 ## 3. Хэсэг A — Найман тест
