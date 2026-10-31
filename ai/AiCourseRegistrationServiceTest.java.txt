@@ -1,0 +1,176 @@
+package mn.edu.must.sqat;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class AiCourseRegistrationServiceTest {
+
+    @Mock
+    private StudentRepository repository;
+
+    @Mock
+    private EmailSender emailSender;
+
+    @InjectMocks
+    private CourseRegistrationService service;
+
+    private Student activeStudent;
+
+    @BeforeEach
+    void setUp() {
+        activeStudent = new Student("S1", "s1@must.edu.mn", true, List.of("MATH101", "CS101"));
+    }
+
+    @Test
+    void register_success_savesAndSendsEmail() {
+        when(repository.findStudent("S1")).thenReturn(activeStudent);
+        when(repository.courseExists("CS201")).thenReturn(true);
+        when(repository.prerequisites("CS201")).thenReturn(List.of("CS101"));
+
+        String result = service.register("S1", "CS201");
+
+        assertEquals("OK", result);
+        verify(repository).saveRegistration("S1", "CS201");
+        verify(emailSender).send(eq("s1@must.edu.mn"), anyString(), anyString());
+    }
+
+    @Test
+    void register_success_emailContainsCourseId() {
+        when(repository.findStudent("S1")).thenReturn(activeStudent);
+        when(repository.courseExists("CS201")).thenReturn(true);
+        when(repository.prerequisites("CS201")).thenReturn(List.of());
+
+        service.register("S1", "CS201");
+
+        verify(emailSender).send(eq("s1@must.edu.mn"), eq("Бүртгэл баталгаажлаа"),
+                eq("CS201 хичээлд амжилттай бүртгэгдлээ."));
+    }
+
+    @Test
+    void register_success_savesBeforeEmail() {
+        when(repository.findStudent("S1")).thenReturn(activeStudent);
+        when(repository.courseExists("CS201")).thenReturn(true);
+        when(repository.prerequisites("CS201")).thenReturn(List.of());
+
+        service.register("S1", "CS201");
+
+        InOrder order = inOrder(repository, emailSender);
+        order.verify(repository).saveRegistration("S1", "CS201");
+        order.verify(emailSender).send(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void register_noPrerequisites_ok() {
+        when(repository.findStudent("S1")).thenReturn(activeStudent);
+        when(repository.courseExists("CS101")).thenReturn(true);
+        when(repository.prerequisites("CS101")).thenReturn(List.of());
+
+        assertEquals("OK", service.register("S1", "CS101"));
+        verify(repository).saveRegistration("S1", "CS101");
+    }
+
+    @Test
+    void register_studentNotFound_returnsErrorNoStudent() {
+        when(repository.findStudent("X")).thenReturn(null);
+
+        assertEquals("ERROR_NO_STUDENT", service.register("X", "CS201"));
+
+        verify(repository, never()).saveRegistration(anyString(), anyString());
+        verifyNoInteractions(emailSender);
+    }
+
+    @Test
+    void register_inactiveStudent_returnsErrorInactive() {
+        Student inactive = new Student("S2", "s2@must.edu.mn", false, List.of());
+        when(repository.findStudent("S2")).thenReturn(inactive);
+
+        assertEquals("ERROR_INACTIVE_STUDENT", service.register("S2", "CS201"));
+
+        verify(repository, never()).courseExists(anyString());
+        verify(repository, never()).saveRegistration(anyString(), anyString());
+        verifyNoInteractions(emailSender);
+    }
+
+    @Test
+    void register_courseNotFound_returnsErrorNoCourse() {
+        when(repository.findStudent("S1")).thenReturn(activeStudent);
+        when(repository.courseExists("NOPE")).thenReturn(false);
+
+        assertEquals("ERROR_NO_COURSE", service.register("S1", "NOPE"));
+
+        verify(repository, never()).prerequisites(anyString());
+        verify(repository, never()).saveRegistration(anyString(), anyString());
+        verifyNoInteractions(emailSender);
+    }
+
+    @Test
+    void register_missingPrerequisite_returnsErrorPrerequisites() {
+        when(repository.findStudent("S1")).thenReturn(activeStudent);
+        when(repository.courseExists("CS301")).thenReturn(true);
+        when(repository.prerequisites("CS301")).thenReturn(List.of("CS101", "CS201"));
+
+        assertEquals("ERROR_PREREQUISITES", service.register("S1", "CS301"));
+
+        verify(repository, never()).saveRegistration(anyString(), anyString());
+        verifyNoInteractions(emailSender);
+    }
+
+    @Test
+    void register_studentWithNoCoursesTaken_prerequisiteMissing() {
+        Student fresh = new Student("S3", "s3@must.edu.mn", true, List.of());
+        when(repository.findStudent("S3")).thenReturn(fresh);
+        when(repository.courseExists("CS201")).thenReturn(true);
+        when(repository.prerequisites("CS201")).thenReturn(List.of("CS101"));
+
+        assertEquals("ERROR_PREREQUISITES", service.register("S3", "CS201"));
+    }
+
+    @Test
+    void register_emailFails_stillOk() {
+        when(repository.findStudent("S1")).thenReturn(activeStudent);
+        when(repository.courseExists("CS201")).thenReturn(true);
+        when(repository.prerequisites("CS201")).thenReturn(List.of());
+        doThrow(new RuntimeException("SMTP down"))
+                .when(emailSender).send(anyString(), anyString(), anyString());
+
+        assertEquals("OK", service.register("S1", "CS201"));
+
+        verify(repository).saveRegistration("S1", "CS201");
+    }
+
+    @Test
+    void register_nullStudentId_throws() {
+        assertThrows(IllegalArgumentException.class, () -> service.register(null, "CS201"));
+        verifyNoInteractions(repository, emailSender);
+    }
+
+    @Test
+    void register_nullCourseId_throws() {
+        assertThrows(IllegalArgumentException.class, () -> service.register("S1", null));
+        verifyNoInteractions(repository, emailSender);
+    }
+
+    @Test
+    void register_bothNull_throws() {
+        assertThrows(IllegalArgumentException.class, () -> service.register(null, null));
+        verifyNoInteractions(repository, emailSender);
+    }
+}

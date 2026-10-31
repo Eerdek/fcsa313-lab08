@@ -1,0 +1,12 @@
+== M1
+  register_inactiveStudent_returnsErrorInactive [FAILURE]
+[ERROR] Tests run: 13, Failures: 1, Errors: 0, Skipped: 0
+== M2
+  register_emailFails_stillOk [FAILURE]
+  register_noPrerequisites_ok [FAILURE]
+  register_success_savesAndSendsEmail [FAILURE]
+  register_success_savesBeforeEmail [FAILURE]
+[ERROR] Tests run: 13, Failures: 4, Errors: 0, Skipped: 0
+== M3
+  register_nullCourseId_throws [FAILURE]
+[ERROR] Tests run: 13, Failures: 1, Errors: 0, Skipped: 0
