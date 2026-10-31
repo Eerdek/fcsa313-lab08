@@ -1,5 +1,6 @@
 package mn.edu.must.sqat;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -113,10 +114,14 @@ class CourseRegistrationServiceTest {
         verify(emailSender).send(eq(EMAIL), anyString(), anyString());
     }
 
-    // A6 — assertThrows
+    // A6 — assertThrows (аргумент ТУС БҮРИЙН null-ийг шалгана; мутант-3-ын дараа нэмсэн)
     @Test
     void register_nullInput_throwsIllegalArgumentAndTouchesNoDependency() {
-        assertThrows(IllegalArgumentException.class, () -> service.register(null, COURSE_ID));
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> service.register(null, COURSE_ID), "studentId = null"),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> service.register(STUDENT_ID, null), "courseId = null"));
 
         verifyNoInteractions(repository, emailSender);
     }
