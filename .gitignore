@@ -1,0 +1,20 @@
+# Maven build гаралт — репод оруулахгүй
+target/
+
+# Багшийн зааврын эх файлыг public репод оруулахгүй
+*.docx
+~$*
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+.DS_Store
+Thumbs.db
+
+# Түр зуурын файлууд
+*.tmp
+*.log
